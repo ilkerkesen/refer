@@ -89,7 +89,7 @@ if __name__ == '__main__':
     import sys
     ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
     sys.path.insert(0, osp.join(ROOT_DIR, 'lib', 'datasets'))
-    from refer import REFER
+    from refer import XREFER as REFER
 
     # load refer of dataset
     dataset = 'refcoco'
@@ -119,18 +119,3 @@ if __name__ == '__main__':
     # print 'generated sent (CIDEr score %0.1f)' % (evals[0]['CIDEr'])
 
     # print refEval.refToEval[8]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

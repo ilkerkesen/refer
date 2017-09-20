@@ -9,7 +9,7 @@ This interface provides access to four datasets:
 split by unc and google
 
 The following API functions are defined:
-REFER      - REFER api class
+XREFER     - REFER api class
 getRefIds  - get ref ids that satisfy given filter conditions.
 getAnnIds  - get ann ids that satisfy given filter conditions.
 getImgIds  - get image ids that satisfy given filter conditions.
@@ -30,18 +30,13 @@ import json
 import cPickle as pickle
 import time
 import itertools
-import skimage.io as io
-import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Polygon, Rectangle
 from pprint import pprint
 import numpy as np
 from external import mask
 # import cv2
 # from skimage.measure import label, regionprops
 
-class REFER:
-
+class REFER(object):
 	def __init__(self, data_root, dataset='refcoco', splitBy='unc'):
 		# provide data_root folder which contains refclef, refcoco, refcoco+ and refcocog
 		# also provide dataset name and splitBy information
@@ -230,49 +225,6 @@ class REFER:
 		ann = self.refToAnn[ref_id]
 		return ann['bbox']  # [x, y, w, h]
 
-	def showRef(self, ref, seg_box='seg'):
-		ax = plt.gca()
-		# show image
-		image = self.Imgs[ref['image_id']]
-		I = io.imread(osp.join(self.IMAGE_DIR, image['file_name']))
-		ax.imshow(I)
-		# show refer expression
-		for sid, sent in enumerate(ref['sentences']):
-			print '%s. %s' % (sid+1, sent['sent'])
-		# show segmentations
-		if seg_box == 'seg':
-			ann_id = ref['ann_id']
-			ann = self.Anns[ann_id]
-			polygons = []
-			color = []
-			c = 'none'
-			if type(ann['segmentation'][0]) == list:
-				# polygon used for refcoco*
-				for seg in ann['segmentation']:
-					poly = np.array(seg).reshape((len(seg)/2, 2))
-					polygons.append(Polygon(poly, True, alpha=0.4))
-					color.append(c)
-				p = PatchCollection(polygons, facecolors=color, edgecolors=(1,1,0,0), linewidths=3, alpha=1)
-				ax.add_collection(p)  # thick yellow polygon
-				p = PatchCollection(polygons, facecolors=color, edgecolors=(1,0,0,0), linewidths=1, alpha=1)
-				ax.add_collection(p)  # thin red polygon
-			else:
-				# mask used for refclef
-				rle = ann['segmentation']
-				m = mask.decode(rle)
-				img = np.ones( (m.shape[0], m.shape[1], 3) )
-				color_mask = np.array([2.0,166.0,101.0])/255
-				for i in range(3):
-					img[:,:,i] = color_mask[i]
-				ax.imshow(np.dstack( (img, m*0.5) ))
-		# show bounding-box
-		elif seg_box == 'box':
-			ann_id = ref['ann_id']
-			ann = self.Anns[ann_id]
-			bbox = 	self.getRefBox(ref['ref_id'])
-			box_plot = Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3], fill=False, edgecolor='green', linewidth=3)
-			ax.add_patch(box_plot)
-
 	def getMask(self, ref):
 		# return mask, area and mask-center
 		ann = self.refToAnn[ref['ref_id']]
@@ -323,15 +275,80 @@ class REFER:
 		# ax.imshow(np.dstack( (img, m*0.5) ))
 		# plt.show()
 
+
+class XREFER(REFER):
+        def __init__(self, *args, **kwargs):
+                super(XREFER, self).__init__(*args, **kwargs)
+
+                # separate X related imports
+                from skimage.io import io
+                import matplotlib.pyplot as plt
+                from matplotlib.collections import PatchCollection
+                from matplotlib.patches import Polygon, Rectangle
+
+                # create fields for them
+                self.io = io
+                self.plt = plt
+                self.PatchCollection = PatchCollection
+                self.Polygon = Polygon
+                self.Rectangle = Rectangle
+
+
+	def showRef(self, ref, seg_box='seg'):
+		ax = self.pltgca()
+		# show image
+
+		image = self.Imgs[ref['image_id']]
+		I = self.io.imread(osp.join(self.IMAGE_DIR, image['file_name']))
+		ax.imshow(I)
+		# show refer expression
+		for sid, sent in enumerate(ref['sentences']):
+			print '%s. %s' % (sid+1, sent['sent'])
+		# show segmentations
+		if seg_box == 'seg':
+			ann_id = ref['ann_id']
+			ann = self.Anns[ann_id]
+			polygons = []
+			color = []
+			c = 'none'
+			if type(ann['segmentation'][0]) == list:
+				# polygon used for refcoco*
+				for seg in ann['segmentation']:
+					poly = np.array(seg).reshape((len(seg)/2, 2))
+					polygons.append(self.Polygon(poly, True, alpha=0.4))
+					color.append(c)
+				p = self.PatchCollection(polygons, facecolors=color, edgecolors=(1,1,0,0), linewidths=3, alpha=1)
+				ax.add_collection(p)  # thick yellow polygon
+				p = self.PatchCollection(polygons, facecolors=color, edgecolors=(1,0,0,0), linewidths=1, alpha=1)
+				ax.add_collection(p)  # thin red polygon
+			else:
+				# mask used for refclef
+				rle = ann['segmentation']
+				m = mask.decode(rle)
+				img = np.ones( (m.shape[0], m.shape[1], 3) )
+				color_mask = np.array([2.0,166.0,101.0])/255
+				for i in range(3):
+					img[:,:,i] = color_mask[i]
+				ax.imshow(np.dstack( (img, m*0.5) ))
+		# show bounding-box
+		elif seg_box == 'box':
+			ann_id = ref['ann_id']
+			ann = self.Anns[ann_id]
+			bbox = 	self.getRefBox(ref['ref_id'])
+			box_plot = self.Rectangle((bbox[0], bbox[1]), bbox[2], bbox[3], fill=False, edgecolor='green', linewidth=3)
+			ax.add_patch(box_plot)
+
 	def showMask(self, ref):
-		M = self.getMask(ref)
+                M = self.getMask(ref)
 		msk = M['mask']
-		ax = plt.gca()
+		ax = self.pltgca()
 		ax.imshow(msk)
 
 
+
 if __name__ == '__main__':
-	refer = REFER(dataset='refcocog', splitBy='google')
+        print 'nothing yet'
+	refer = XREFER(dataset='refcocog', splitBy='google')
 	ref_ids = refer.getRefIds()
 	print(len(ref_ids))
 
